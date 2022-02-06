@@ -2,9 +2,13 @@ cmake_minimum_required(VERSION 3.10)
 project(apollo_ha)
 
 set(CMAKE_CXX_STANDARD 11)
-add_compile_options(/Ox)
+if(MSVC)
+  add_compile_options(/Ox)
+else()
+  add_compile_options(-O3)
+endif()
 
-find_package(Matlab)
+find_package(Matlab REQUIRED)
 
 include_directories(./)
 

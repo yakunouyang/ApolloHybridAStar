@@ -26,8 +26,6 @@
 #include <utility>
 #include <vector>
 
-#include <omp.h>
-
 #include "parking_planner/parking_planner_config.h"
 #include "math/math_utils.h"
 #include "parking_planner/node3d.h"
