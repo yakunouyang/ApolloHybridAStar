@@ -104,7 +104,7 @@ struct GridAStartResult {
 
 class GridSearch {
 public:
-  explicit GridSearch(const ParkingPlannerConfig &config, const std::vector<Circle2d> &obstacles);
+  explicit GridSearch(const ParkingPlannerConfig &config, const std::vector<common::math::Polygon2d> &obstacles);
   virtual ~GridSearch() = default;
   bool GenerateAStarPath(
       double sx, double sy, double ex, double ey,
@@ -122,13 +122,13 @@ private:
 
 private:
   double xy_grid_resolution_ = 0.0;
-  std::array<double, 4> XYbounds_;
+  std::array<double, 4> xy_bounds_;
   double max_grid_x_ = 0.0;
   double max_grid_y_ = 0.0;
   std::shared_ptr<Node2d> start_node_;
   std::shared_ptr<Node2d> end_node_;
   std::shared_ptr<Node2d> final_node_;
-  std::vector<Circle2d> obstacles_;
+  std::vector<common::math::Polygon2d> obstacles_;
 
   struct cmp {
     bool operator()(const std::pair<int64_t, double>& left,

@@ -21,12 +21,13 @@
 #include "parking_planner/grid_search.h"
 
 #include <algorithm>
+#include <fstream>
 
 namespace planning {
 
-GridSearch::GridSearch(const ParkingPlannerConfig &config, const std::vector<Circle2d> &obstacles): obstacles_(obstacles) {
+GridSearch::GridSearch(const ParkingPlannerConfig &config, const std::vector<common::math::Polygon2d> &obstacles): obstacles_(obstacles) {
   xy_grid_resolution_ = config.grid_a_star_xy_resolution;
-  XYbounds_ = config.xy_bounds;
+  xy_bounds_ = config.xy_bounds;
 }
 
 double GridSearch::EuclidDistance(const double x1, const double y1,
@@ -61,35 +62,35 @@ std::vector<std::shared_ptr<Node2d>> GridSearch::GenerateNextNodes(
   std::vector<std::shared_ptr<Node2d>> next_nodes;
   std::shared_ptr<Node2d> up = std::make_shared<Node2d>(
       current_node_x, current_node_y + xy_grid_resolution_, xy_grid_resolution_,
-      XYbounds_);
+      xy_bounds_);
   up->SetPathCost(current_node_path_cost + 1.0);
   std::shared_ptr<Node2d> up_right = std::make_shared<Node2d>(
       current_node_x + xy_grid_resolution_,
-      current_node_y + xy_grid_resolution_, xy_grid_resolution_, XYbounds_);
+      current_node_y + xy_grid_resolution_, xy_grid_resolution_, xy_bounds_);
   up_right->SetPathCost(current_node_path_cost + diagonal_distance);
   std::shared_ptr<Node2d> right =
       std::make_shared<Node2d>(current_node_x + xy_grid_resolution_,
-                               current_node_y, xy_grid_resolution_, XYbounds_);
+                               current_node_y, xy_grid_resolution_, xy_bounds_);
   right->SetPathCost(current_node_path_cost + 1.0);
   std::shared_ptr<Node2d> down_right = std::make_shared<Node2d>(
       current_node_x + xy_grid_resolution_,
-      current_node_y - xy_grid_resolution_, xy_grid_resolution_, XYbounds_);
+      current_node_y - xy_grid_resolution_, xy_grid_resolution_, xy_bounds_);
   down_right->SetPathCost(current_node_path_cost + diagonal_distance);
   std::shared_ptr<Node2d> down = std::make_shared<Node2d>(
       current_node_x, current_node_y - xy_grid_resolution_, xy_grid_resolution_,
-      XYbounds_);
+      xy_bounds_);
   down->SetPathCost(current_node_path_cost + 1.0);
   std::shared_ptr<Node2d> down_left = std::make_shared<Node2d>(
       current_node_x - xy_grid_resolution_,
-      current_node_y - xy_grid_resolution_, xy_grid_resolution_, XYbounds_);
+      current_node_y - xy_grid_resolution_, xy_grid_resolution_, xy_bounds_);
   down_left->SetPathCost(current_node_path_cost + diagonal_distance);
   std::shared_ptr<Node2d> left =
       std::make_shared<Node2d>(current_node_x - xy_grid_resolution_,
-                               current_node_y, xy_grid_resolution_, XYbounds_);
+                               current_node_y, xy_grid_resolution_, xy_bounds_);
   left->SetPathCost(current_node_path_cost + 1.0);
   std::shared_ptr<Node2d> up_left = std::make_shared<Node2d>(
       current_node_x - xy_grid_resolution_,
-      current_node_y + xy_grid_resolution_, xy_grid_resolution_, XYbounds_);
+      current_node_y + xy_grid_resolution_, xy_grid_resolution_, xy_bounds_);
   up_left->SetPathCost(current_node_path_cost + diagonal_distance);
 
   next_nodes.emplace_back(up);
@@ -110,12 +111,12 @@ bool GridSearch::GenerateDpMap(
       open_pq;
   std::unordered_map<int64_t, std::shared_ptr<Node2d>> open_set;
   dp_map_ = decltype(dp_map_)();
-  XYbounds_ = XYbounds;
+  xy_bounds_ = XYbounds;
   // XYbounds with xmin, xmax, ymin, ymax
-  max_grid_y_ = std::round((XYbounds_[3] - XYbounds_[2]) / xy_grid_resolution_);
-  max_grid_x_ = std::round((XYbounds_[1] - XYbounds_[0]) / xy_grid_resolution_);
+  max_grid_y_ = std::round((xy_bounds_[3] - xy_bounds_[2]) / xy_grid_resolution_);
+  max_grid_x_ = std::round((xy_bounds_[1] - xy_bounds_[0]) / xy_grid_resolution_);
   std::shared_ptr<Node2d> end_node =
-      std::make_shared<Node2d>(ex, ey, xy_grid_resolution_, XYbounds_);
+      std::make_shared<Node2d>(ex, ey, xy_grid_resolution_, xy_bounds_);
   open_set.emplace(end_node->GetIndex(), end_node);
   open_pq.emplace(end_node->GetIndex(), end_node->GetCost());
 
@@ -148,11 +149,17 @@ bool GridSearch::GenerateDpMap(
       }
     }
   }
+
+//  std::ofstream ofs("dp_map.csv");
+//  for(auto &pair: dp_map_) {
+//    ofs << pair.second->GetGridX() << ',' << pair.second->GetGridY() << ',' << pair.second->GetCost() << std::endl;
+//  }
+//  ofs.close();
   return true;
 }
 
 double GridSearch::CheckDpMap(const double sx, const double sy) {
-  int64_t index = Node2d::CalcIndex(sx, sy, xy_grid_resolution_, XYbounds_);
+  int64_t index = Node2d::CalcIndex(sx, sy, xy_grid_resolution_, xy_bounds_);
   if (dp_map_.find(index) != dp_map_.end()) {
     return dp_map_[index]->GetCost() * xy_grid_resolution_;
   } else {
@@ -167,9 +174,9 @@ void GridSearch::LoadGridAStarResult(GridAStartResult *result) {
   std::vector<double> grid_a_y;
   while (current_node->GetPreNode() != nullptr) {
     grid_a_x.push_back(current_node->GetGridX() * xy_grid_resolution_ +
-                       XYbounds_[0]);
+                       xy_bounds_[0]);
     grid_a_y.push_back(current_node->GetGridY() * xy_grid_resolution_ +
-                       XYbounds_[2]);
+                       xy_bounds_[2]);
     current_node = current_node->GetPreNode();
   }
   std::reverse(grid_a_x.begin(), grid_a_x.end());

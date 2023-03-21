@@ -42,31 +42,23 @@ struct HybridAStartResult {
   std::vector<double> x;
   std::vector<double> y;
   std::vector<double> phi;
-  std::vector<double> v;
-  std::vector<double> a;
-  std::vector<double> steer;
-  std::vector<double> accumulated_s;
+  std::vector<std::vector<double>> trailer_phi;
 };
 
 class HybridAStar {
 public:
-  HybridAStar(const ParkingPlannerConfig &config, const VehicleParameter &vehicle, const std::vector<Circle2d> &obstacles);
+  HybridAStar(const ParkingPlannerConfig &config, const VehicleParameter &vehicle, const std::vector<common::math::Polygon2d> &obstacles);
   virtual ~HybridAStar() = default;
-  bool Plan(double sx, double sy, double sphi, double ex, double ey, double ephi,
-            HybridAStartResult* result);
-  bool TrajectoryPartition(const HybridAStartResult& result,
-                           std::vector<HybridAStartResult>* partitioned_result);
+  bool Plan(
+      double sx, double sy, double sphi, const std::vector<double> &strailer_phi,
+      double ex, double ey, double ephi, const std::vector<double> &etrailer_phi,
+      HybridAStartResult* result);
 
 private:
   bool AnalyticExpansion(const std::shared_ptr<Node3d>& current_node);
   // check collision and validity
   bool ValidityCheck(const std::shared_ptr<Node3d>& node);
-  // check Reeds Shepp path collision and validity
-  bool RSPCheck(const std::shared_ptr<ReedSheppPath>& reeds_shepp_to_end);
-  // load the whole RSP as nodes and add to the close set
-  std::shared_ptr<Node3d> LoadRSPinCS(
-      const std::shared_ptr<ReedSheppPath>& reeds_shepp_to_end,
-      std::shared_ptr<Node3d> current_node);
+
   std::shared_ptr<Node3d> Next_node_generator(
       const std::shared_ptr<Node3d>& current_node, size_t next_node_index);
   void CalculateNodeCost(const std::shared_ptr<Node3d>& current_node,
@@ -75,46 +67,31 @@ private:
                   const std::shared_ptr<Node3d>& next_node);
   double HoloObstacleHeuristic(const std::shared_ptr<Node3d>& next_node);
   bool GetResult(HybridAStartResult* result);
-  bool GetTemporalProfile(HybridAStartResult* result);
-  bool GenerateSpeedAcceleration(HybridAStartResult* result);
 
 private:
-  ParkingPlannerConfig planner_open_space_config_;
+  ParkingPlannerConfig config_;
   VehicleParameter vehicle_param_;
-  size_t next_node_num_ = 0;
   double max_steer_angle_ = 0.0;
-  double step_size_ = 0.0;
-  double xy_grid_resolution_ = 0.0;
-  double delta_t_ = 0.0;
-  double traj_forward_penalty_ = 0.0;
-  double traj_back_penalty_ = 0.0;
-  double traj_gear_switch_penalty_ = 0.0;
-  double traj_steer_penalty_ = 0.0;
-  double traj_steer_change_penalty_ = 0.0;
-  double heu_rs_forward_penalty_ = 0.0;
-  double heu_rs_back_penalty_ = 0.0;
-  double heu_rs_gear_switch_penalty_ = 0.0;
-  double heu_rs_steer_penalty_ = 0.0;
-  double heu_rs_steer_change_penalty_ = 0.0;
-  std::array<double, 4> XYbounds_;
+  int explore_num_ = 0;
   std::shared_ptr<Node3d> start_node_;
   std::shared_ptr<Node3d> end_node_;
   std::shared_ptr<Node3d> final_node_;
-  std::vector<Circle2d> obstacles_;
+  std::vector<common::math::Polygon2d> obstacles_;
 
   struct cmp {
-    bool operator()(const std::pair<int64_t, double>& left,
-                    const std::pair<int64_t, double>& right) const {
+    bool operator()(const std::pair<std::string, double>& left,
+                    const std::pair<std::string, double>& right) const {
       return left.second >= right.second;
     }
   };
-  std::priority_queue<std::pair<int64_t, double>,
-      std::vector<std::pair<int64_t, double>>, cmp>
+  std::priority_queue<std::pair<std::string, double>,
+      std::vector<std::pair<std::string, double>>, cmp>
       open_pq_;
-  std::unordered_map<int64_t, std::shared_ptr<Node3d>> open_set_;
-  std::unordered_map<int64_t, std::shared_ptr<Node3d>> close_set_;
+  std::unordered_map<std::string, std::shared_ptr<Node3d>> open_set_;
+  std::unordered_map<std::string, std::shared_ptr<Node3d>> close_set_;
   std::unique_ptr<ReedShepp> reed_shepp_generator_;
   std::unique_ptr<GridSearch> grid_a_star_heuristic_generator_;
 };
+
 
 }  // namespace planning

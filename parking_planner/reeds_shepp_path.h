@@ -41,6 +41,7 @@ struct ReedSheppPath {
   std::vector<double> phi;
   // true for driving forward and false for driving backward
   std::vector<bool> gear;
+  std::vector<double> kappa;
 };
 
 struct RSPParam {
@@ -83,7 +84,7 @@ protected:
   void Interpolation(const int index, const double pd, const char m,
                      const double ox, const double oy, const double ophi,
                      std::vector<double>* px, std::vector<double>* py,
-                     std::vector<double>* pphi, std::vector<bool>* pgear);
+                     std::vector<double>* pphi, std::vector<bool>* pgear, std::vector<double> *pkappa);
   // motion primitives combination setup function
   bool SetRSP(const int size, const double* lengths, const char* types,
               std::vector<ReedSheppPath>* all_possible_paths);
@@ -121,7 +122,7 @@ protected:
 
 protected:
   VehicleParameter vehicle_param_;
-  ParkingPlannerConfig planner_open_space_config_;
+  ParkingPlannerConfig config_;
   double max_kappa_;
   bool enable_parallel_hybrid_a_ = true;
 };

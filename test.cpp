@@ -4,38 +4,104 @@
 #include "parking_planner/vehicle_parameter.h"
 #include "parking_planner/hybrid_a_star.h"
 #include "math/circle_2d.h"
+#include "visualization/plot.h"
 
-double obs[][3] = {
-    {14.4455924557333, -0.605866657915925, 1.39345636121527},
-    {6.85724558696104, 9.65031773816826, 1.52005246739039},
-    {-19.2168950578673, -6.76568479143716, 1.42430949683314},
-    {19.5948861452602, 0.576938260228175, 1.88428102312696},
-    {11.5985211977812, -7.25903018404031, 1.53406412737073},
+#include <chrono>
+#include <thread>
+
+double obs[][4][2] = {
+    {
+      {-10, -20},
+      {-10, 30},
+      {-50, 30},
+      {-50, -20}
+    },
+    {
+        {-2, 0},
+        {-4, 0},
+        {-4, -50},
+        {-2, -50}
+    },
+    {
+        {4, -20},
+        {50, -20},
+        {50, 30},
+        {4, 30}
+    },
+    {
+        {-4, 5},
+        {-2, 5},
+        {-2, 25},
+        {-4, 25}
+    }
 };
 
-double profile[] = { 10.6020000000000,	-4.51000000000000,	2.35619449019235 };
+double profile[][6] = {
+    {22, -23, 0, 0, 0, 0},
+    {-13, -23, 0, 0, 0, 0},
+};
 
-int main() {
+int main(int argc, char **argv) {
+  visualization::Init("world", "test_markers");
+
   ParkingPlannerConfig config;
-  config.xy_bounds = { -30.0, 30.0, -30.0, 30.0 };
+  config.xy_bounds = { -25.0, 25.0, -25.0, 25.0 };
+
   VehicleParameter vehicle;
+  vehicle.wheel_base = 1.5;
+  vehicle.front_hang = 0.25;
+  vehicle.rear_hang = 0.25;
+  vehicle.width = 2.0;
+  vehicle.a_max = 0.25;
+  vehicle.v_max = 2.5;
+  vehicle.delta_max = 0.7;
+  vehicle.omega_max = 0.5;
+  vehicle.LW = { 1.5, 1.5, 1.5 };
+  vehicle.LH = { 1.5, 1.5, 1.5 };
+  vehicle.LN = { 1, 1, 1 };
+  vehicle.LM = { 1, 1, 1 };
+  vehicle.LB = { 2, 2, 2 };
   vehicle.GenerateDisc();
 
-//  for(int i = 0; i < 5; i++) {
-//    if(common::math::Circle2d(obs[i][0], obs[i][1], obs[i][2]).HasOverlap(vehicle.GenerateBox({ profile[0], profile[1], profile[2] }))) {
-//      return -1;
-//    }
-//  }
+  std::vector<common::math::Polygon2d> obstacles;
+  for(int i = 0; i < 4; i++) {
+    std::vector<common::math::Vec2d> points;
+    for(auto & j : obs[i]) {
+      points.emplace_back(j[0], j[1]);
+    }
+    obstacles.emplace_back(points);
 
-  planning::HybridAStar planner(config, vehicle, {});
+    visualization::PlotPolygon(obstacles.back(), 0.1, visualization::Color::Magenta, i+1, "Obstacles");
+  }
+  visualization::Trigger();
+
+  planning::HybridAStar planner(config, vehicle, obstacles);
 
   planning::HybridAStartResult result;
-  if(!planner.Plan(  -13.000000000000010,  -22.516660498395400,    1.047197551196597,   13.000000000000004,   22.516660498395403,   -2.094395102393196, &result)) {
+  std::vector<double> start_trailer(profile[0] + 3, profile[0] + 6);
+  std::vector<double> goal_trailer(profile[1] + 3, profile[1] + 6);
+  if(!planner.Plan(
+      profile[0][0], profile[0][1], profile[0][2], start_trailer,
+      profile[1][0], profile[1][1], profile[1][2], goal_trailer,
+      &result)) {
     return -1;
   }
+  printf("%zu", result.x.size());
 
-  printf("%d", result.x.size());
+  for (int k = 0; k < result.x.size(); k++) {
+      std::vector<double> states = {result.x[k], result.y[k], result.phi[k]};
+      states.insert(states.end(), result.trailer_phi[k].begin(), result.trailer_phi[k].end());
+      auto boxes = vehicle.GenerateBoxes(states);
+      for (int i = 0; i < boxes.size(); i++) {
+        visualization::PlotPolygon(common::math::Polygon2d(boxes[i]), 0.1,
+                                   i == 0 ? visualization::Color::Yellow : visualization::Color::White, i, "Boxes");
+      }
+      visualization::Trigger();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 
+
+  visualization::Spin();
   return 0;
 
 }
