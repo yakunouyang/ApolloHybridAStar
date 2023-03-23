@@ -9,42 +9,73 @@
 #include <chrono>
 #include <thread>
 
+//double obs[][4][2] = {
+//    {
+//      {-10, -20},
+//      {-10, 30},
+//      {-50, 30},
+//      {-50, -20}
+//    },
+//    {
+//        {-2, 0},
+//        {-4, 0},
+//        {-4, -50},
+//        {-2, -50}
+//    },
+//    {
+//        {4, -20},
+//        {50, -20},
+//        {50, 30},
+//        {4, 30}
+//    },
+//    {
+//        {-4, 5},
+//        {-2, 5},
+//        {-2, 25},
+//        {-4, 25}
+//    }
+//};
+//
+//double profile[][6] = {
+//    {22, -23, 0, 0, 0, 0},
+//    {-13, -23, 0, 0, 0, 0},
+//};
+
 double obs[][4][2] = {
     {
-      {-10, -20},
-      {-10, 30},
-      {-50, 30},
-      {-50, -20}
+        {-20, -20},
+        {-7, -20},
+        {-7, 0},
+        {-20, 0}
     },
     {
-        {-2, 0},
-        {-4, 0},
-        {-4, -50},
-        {-2, -50}
+        {-3, -20},
+        {20, -20},
+        {20, 0},
+        {-3, 0}
     },
-    {
-        {4, -20},
-        {50, -20},
-        {50, 30},
-        {4, 30}
-    },
-    {
-        {-4, 5},
-        {-2, 5},
-        {-2, 25},
-        {-4, 25}
-    }
 };
 
 double profile[][6] = {
-    {22, -23, 0, 0, 0, 0},
-    {-13, -23, 0, 0, 0, 0},
+    {15, 15, M_PI_4, M_PI_4, M_PI_4, M_PI_4},
+    {-5, -2, M_PI_2, M_PI_2, M_PI_2, M_PI_2},
 };
 
+#if ROS_VISUALIZATION
+#include <ros/ros.h>
+#endif
+
+
 int main(int argc, char **argv) {
+#if ROS_VISUALIZATION
+  ros::init(argc, argv, "ha_test_node");
+#endif
   visualization::Init("world", "test_markers");
 
+  sleep(1);
+
   ParkingPlannerConfig config;
+//  config.next_node_num = 20;
   config.xy_bounds = { -25.0, 25.0, -25.0, 25.0 };
 
   VehicleParameter vehicle;
@@ -63,8 +94,23 @@ int main(int argc, char **argv) {
   vehicle.LB = { 2, 2, 2 };
   vehicle.GenerateDisc();
 
+  std::vector<double> state(6, 0.0);
+  for(int i = 0; i < 20; i++) {
+    state = vehicle.ForwardStates(1.0 / 20, state, vehicle.v_max, vehicle.delta_max);
+
+    auto boxes = vehicle.GenerateBoxes(state);
+    for (int j = 0; j < boxes.size(); j++) {
+      visualization::PlotPolygon(common::math::Polygon2d(boxes[j]), 0.1,
+                                 j == 0 ? visualization::Color::Yellow : visualization::Color::White, i*4 + j, "Boxes");
+    }
+    visualization::Trigger();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  visualization::Spin();
+  return 0;
+
   std::vector<common::math::Polygon2d> obstacles;
-  for(int i = 0; i < 4; i++) {
+  for(int i = 0; i < 2; i++) {
     std::vector<common::math::Vec2d> points;
     for(auto & j : obs[i]) {
       points.emplace_back(j[0], j[1]);

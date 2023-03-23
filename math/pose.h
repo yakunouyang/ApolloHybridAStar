@@ -16,6 +16,10 @@ public:
   inline double y() const { return y_; }
   inline double theta() const { return theta_; }
 
+  inline void set_x(double x) { x_ = x; }
+  inline void set_y(double x) { y_ = x; }
+  inline void set_theta(double x) { theta_ = x; }
+
   inline operator Vec2d() const { return { x_, y_}; }
 
   inline Pose relativeTo(const Pose &coord) const {

@@ -12,6 +12,27 @@
 #include "math/circle_2d.h"
 #include "math/math_utils.h"
 
+struct VehicleState {
+  std::vector<double> data;
+
+  VehicleState() = default;
+
+  VehicleState(double x, double y, double theta, const std::vector<double> &trailer_theta) {
+    data.resize(3 + trailer_theta.size());
+    data[0] = x;
+    data[1] = y;
+    data[2] = theta;
+    std::copy(trailer_theta.begin(), trailer_theta.end(), data.begin() + 3);
+  }
+
+  VehicleState(common::math::Pose pose, const std::vector<double> &trailer_theta)
+    : VehicleState(pose.x(), pose.y(), pose.theta(), trailer_theta) {}
+
+  common::math::Pose pose() const {
+    return { data[0], data[1], data[2] };
+  }
+};
+
 struct VehicleParameter {
   double wheel_base = 2.8;
   double front_hang = 0.96;
@@ -82,6 +103,21 @@ struct VehicleParameter {
     }
 
     return next;
+  }
+
+  std::vector<VehicleState> SimulateForward(const VehicleState &state, int nfe, double v, double steering) {
+    std::vector<common::math::Pose> tractor_states(nfe);
+    tractor_states[0] = state.pose();
+
+    double dt = 1.0 / nfe;
+    for(int i = 1; i < nfe; i++) {
+      tractor_states[i].set_theta( dt * tan(steering) * v / wheel_base + tractor_states[i-1].theta());
+      tractor_states[i].set_x(tractor_states[i-1].x() + dt * cos(tractor_states[i].theta()) * v);
+      tractor_states[i].set_y(tractor_states[i-1].y() + dt * sin(tractor_states[i].theta()) * v);
+    }
+
+    std::vector<VehicleState> result(nfe);
+    return result;
   }
 
   std::vector<common::math::Box2d> GenerateBoxes(const std::vector<double> &states) {

@@ -20,7 +20,7 @@
 
 #include "parking_planner/hybrid_a_star.h"
 
-#ifndef mex_h
+#ifndef NO_VISUAL
 #include "visualization/plot.h"
 #endif
 
@@ -51,10 +51,10 @@ bool HybridAStar::AnalyticExpansion(const std::shared_ptr<Node3d>& current_node)
   std::vector<double> trailer_phi = current_node->trailer_phi();
   std::vector<std::vector<double>> trailer_phis = { trailer_phi };
 
-#ifndef mex_h
+#ifndef NO_VISUAL
   visualization::Plot(rs_path->x, rs_path->y, 0.1, visualization::Color::Cyan, 1, "RS");
   visualization::Trigger();
-  visualization::Sleep(0.01);
+//  visualization::Sleep(0.01);
 #endif
 
   std::vector<double> states = { rs_path->x[0], rs_path->y[0], rs_path->phi[0] };
@@ -313,7 +313,7 @@ bool HybridAStar::Plan(
     open_pq_.pop();
     std::shared_ptr<Node3d> current_node = open_set_[current_id];
 
-#ifndef mex_h
+#ifndef NO_VISUAL
     if(visualized_num % 1 == 0) {
 //      if (current_node->xs().size() > 1) {
 //        visualization::Plot(current_node->xs(), current_node->ys(), 0.002, visualization::Color::White,
@@ -330,7 +330,17 @@ bool HybridAStar::Plan(
     // check if an analystic curve could be connected from current
     // configuration to the end configuration without collision. if so, search
     // ends.
-    if (hypot(current_node->x() - ex, current_node->y() - ey) < 20.0 && AnalyticExpansion(current_node)) {
+    if (hypot(current_node->x() - ex, current_node->y() - ey) < 10.0 && AnalyticExpansion(current_node)) {
+      break;
+    }
+
+    if (hypot(current_node->x() - ex, current_node->y() - ey) < 2) {
+      final_node_ = current_node;
+      break;
+    }
+
+    if (fabs(current_node->x() - ex) < 0.5 && fabs(current_node->y() - ey) < 0.5 && fabs(current_node->phi() - ephi) < 0.2) {
+      final_node_ = current_node;
       break;
     }
 

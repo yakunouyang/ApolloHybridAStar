@@ -22,6 +22,7 @@ file(GLOB ha_SRC
 find_package(Matlab)
 
 if (${Matlab_FOUND})
+  add_definitions(-DNO_VISUAL)
   matlab_add_mex(NAME apollo_ha SRC ${ha_SRC} main.cpp my_env.cpp)
 endif()
 
